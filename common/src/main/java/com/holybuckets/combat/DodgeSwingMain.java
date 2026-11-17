@@ -1,22 +1,27 @@
 package com.holybuckets.combat;
 
 
+import com.holybuckets.combat.config.ModConfig;
+import com.holybuckets.combat.core.DashManager;
+import com.holybuckets.combat.core.IDashManager;
 import com.holybuckets.foundation.event.EventRegistrar;
-import com.holybuckets.combat.config.TemplateConfig;
+import com.holybuckets.combat.config.DodgeSwingConfig;
 import net.blay09.mods.balm.api.Balm;
-import net.blay09.mods.balm.api.event.EventPriority;
 import net.blay09.mods.balm.api.event.server.ServerStartingEvent;
 
 /**
  * Main instance of the mod, initialize this class statically via commonClass
  * This class will init all major Manager instances and events for the mod
  */
-public class DodgeandSwingMain {
+public class DodgeSwingMain {
     private static boolean DEV_MODE = false;;
-    private static TemplateConfig CONFIG;
-    public static DodgeandSwingMain INSTANCE;
+    public static DodgeSwingConfig CONFIG;
+    public static ModConfig MOD_CONFIG;
+    public static DodgeSwingMain INSTANCE;
 
-    public DodgeandSwingMain()
+    public static IDashManager DASH_MANAGER;
+
+    public DodgeSwingMain()
     {
         super();
         INSTANCE = this;
@@ -35,8 +40,10 @@ public class DodgeandSwingMain {
             .build();
             */
 
+
         //Events
         EventRegistrar registrar = EventRegistrar.getInstance();
+        DashManager.init(registrar);
         //ChallengeBlockBehavior.init(registrar);
 
 
@@ -46,9 +53,8 @@ public class DodgeandSwingMain {
     }
 
     private void onServerStarting(ServerStartingEvent e) {
-        CONFIG = Balm.getConfig().getActiveConfig(TemplateConfig.class);
-        //this.DEV_MODE = CONFIG.devMode;
-        this.DEV_MODE = false;
+        CONFIG = Balm.getConfig().getActiveConfig(DodgeSwingConfig.class);
+        MOD_CONFIG = ModConfig.initOnServerStart(CONFIG);
     }
 
 

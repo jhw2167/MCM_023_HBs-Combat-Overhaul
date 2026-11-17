@@ -1,10 +1,7 @@
 package com.holybuckets.combat;
 
-import com.holybuckets.foundation.event.BalmEventRegister;
-import com.holybuckets.combat.block.ModBlocks;
-import com.holybuckets.combat.block.be.ModBlockEntities;
+import com.holybuckets.combat.config.DodgeSwingConfig;
 import com.holybuckets.combat.item.ModItems;
-import com.holybuckets.combat.menu.ModMenus;
 import com.holybuckets.combat.platform.Services;
 import net.blay09.mods.balm.api.Balm;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -30,14 +27,13 @@ public class CommonClass {
         }
 
         //RegisterConfigs
-        //Balm.getConfig().registerConfig(ChallengeTempleConfig.class);
-        DodgeandSwingMain.INSTANCE = new DodgeandSwingMain();
+        Balm.getConfig().registerConfig(DodgeSwingConfig.class);
+        DodgeSwingMain.INSTANCE = new DodgeSwingMain();
         BalmEventRegister.registerEvents();
         BalmEventRegister.registerCommands();
         ModBlocks.initialize(Balm.getBlocks());
         ModBlockEntities.initialize(Balm.getBlockEntities());
         ModItems.initialize(Balm.getItems());
-        ModMenus.initialize(Balm.getMenus());
         
         isInitialized = true;
     }

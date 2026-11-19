@@ -1,6 +1,7 @@
 package com.holybuckets.combat.core;
 
 import com.holybuckets.combat.Constants;
+import com.holybuckets.combat.config.ModConfig;
 import com.holybuckets.foundation.event.EventRegistrar;
 import com.holybuckets.foundation.event.custom.ServerTickEvent;
 import com.holybuckets.foundation.event.custom.SimpleMessageEvent;
@@ -78,9 +79,15 @@ public class DashManager  {
 
     private static void handleRequest(ServerPlayer player, DashDirection direction, int seq, int invSlotId)
     {
+        if (invSlotId < 0 || invSlotId >= player.getInventory().getContainerSize()) {
+            SimpleStringMessage.createAndFire(player, MSG_RESULT, seq + ",0");
+            return;
+        }
         ItemStack stack = player.getInventory().getItem(invSlotId);
         DashContext ctx = CONTEXTS.get(player);
-        boolean valid = canDash(player) && (ctx==null || ctx.canRequest());
+        boolean valid = canDash(player)
+            && ModConfig.getInstance().isDashItem(stack.getItem())
+            && (ctx==null || ctx.canRequest());
 
         if (!valid) {
             SimpleStringMessage.createAndFire(player, MSG_RESULT, seq + ",0");

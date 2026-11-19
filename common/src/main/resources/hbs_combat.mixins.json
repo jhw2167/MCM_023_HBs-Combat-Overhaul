@@ -11,7 +11,9 @@
         "MixinPlayerModelDash",
         "MixinGameRendererDash",
         "MixinAbstractClientPlayerDash",
-        "MixinLocalPlayerDash"
+        "MixinLocalPlayerDash",
+        "MixinPlayerDash",
+        "MixinItemInHandRendererDash"
     ],
     "server": [
     ],

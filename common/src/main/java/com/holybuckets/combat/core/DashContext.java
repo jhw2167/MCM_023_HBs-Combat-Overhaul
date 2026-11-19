@@ -11,6 +11,8 @@ public class DashContext {
     public Vec3 glideMotion = Vec3.ZERO;
     public int phaseTicks;
     public int seq;
+    public boolean lift;
+    public double startY;
 
     public DashContext(int entityId) {
         this.entityId = entityId;

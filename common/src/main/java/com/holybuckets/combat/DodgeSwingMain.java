@@ -16,7 +16,6 @@ import net.blay09.mods.balm.api.event.server.ServerStartingEvent;
 public class DodgeSwingMain {
     private static boolean DEV_MODE = false;;
     public static DodgeSwingConfig CONFIG;
-    public static ModConfig MOD_CONFIG;
     public static DodgeSwingMain INSTANCE;
 
     public static IDashManager DASH_MANAGER;
@@ -43,6 +42,7 @@ public class DodgeSwingMain {
 
         //Events
         EventRegistrar registrar = EventRegistrar.getInstance();
+        ModConfig.init(registrar);
         DashManager.init(registrar);
         //ChallengeBlockBehavior.init(registrar);
 
@@ -54,7 +54,7 @@ public class DodgeSwingMain {
 
     private void onServerStarting(ServerStartingEvent e) {
         CONFIG = Balm.getConfig().getActiveConfig(DodgeSwingConfig.class);
-        MOD_CONFIG = ModConfig.initOnServerStart(CONFIG);
+        ModConfig.initOnServerStart(CONFIG);
     }
 
 

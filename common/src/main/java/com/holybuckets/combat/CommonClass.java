@@ -3,6 +3,7 @@ package com.holybuckets.combat;
 import com.holybuckets.combat.config.DodgeSwingConfig;
 import com.holybuckets.combat.item.ModItems;
 import com.holybuckets.combat.platform.Services;
+import com.holybuckets.foundation.event.BalmEventRegister;
 import net.blay09.mods.balm.api.Balm;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.Items;
@@ -31,8 +32,6 @@ public class CommonClass {
         DodgeSwingMain.INSTANCE = new DodgeSwingMain();
         BalmEventRegister.registerEvents();
         BalmEventRegister.registerCommands();
-        ModBlocks.initialize(Balm.getBlocks());
-        ModBlockEntities.initialize(Balm.getBlockEntities());
         ModItems.initialize(Balm.getItems());
         
         isInitialized = true;

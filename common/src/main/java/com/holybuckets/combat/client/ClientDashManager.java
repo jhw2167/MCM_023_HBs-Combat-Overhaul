@@ -23,6 +23,10 @@ public class ClientDashManager implements IDashManager {
 
     private static final double ANTICIPATION_DRAG = 0.5D;
     private static final double RECOVERY_CARRY = 0.2D;
+    private static final double LIFT_HEIGHT = 1.25D;
+    private static final double GRAVITY = 0.08D;
+    private static final double AIR_DRAG = 0.98D;
+    private static final double LIFT_STEP = 0.01D;
 
     private static final Map<Integer, DashContext> CONTEXTS = new HashMap<>();
     private static int nextSeq = 0;
@@ -57,6 +61,8 @@ public class ClientDashManager implements IDashManager {
         DashContext ctx = CONTEXTS.computeIfAbsent(local.getId(), DashContext::new);
         int seq = ++nextSeq;
         if (!ctx.begin(direction, local.getYRot(), seq, DashManager.GLIDE_SPEED)) return;
+        ctx.lift = isJumping(local);
+        ctx.startY = local.getY();
 
         local.getCooldowns().addCooldown(stack.getItem(), DashManager.COOLDOWN_TICKS);
         local.level().playLocalSound(local.getX(), local.getY(), local.getZ(), SoundEvents.PLAYER_ATTACK_SWEEP,
@@ -102,7 +108,7 @@ public class ClientDashManager implements IDashManager {
         Vec3 motion = player.getDeltaMovement();
         switch (ctx.phase) {
             case ANTICIPATION -> player.setDeltaMovement(motion.x * ANTICIPATION_DRAG, motion.y, motion.z * ANTICIPATION_DRAG);
-            case GLIDE -> player.setDeltaMovement(ctx.glideMotion.x, motion.y, ctx.glideMotion.z);
+            case GLIDE -> player.setDeltaMovement(ctx.glideMotion.x, glideLift(player, ctx, motion.y), ctx.glideMotion.z);
             case RECOVERY -> {
                 if (ctx.phaseTicks == 0)
                     player.setDeltaMovement(ctx.glideMotion.x * RECOVERY_CARRY, motion.y, ctx.glideMotion.z * RECOVERY_CARRY);
@@ -111,12 +117,41 @@ public class ClientDashManager implements IDashManager {
         }
     }
 
+    private static boolean isJumping(LocalPlayer player) {
+        return player.input.jumping || (!player.onGround() && player.getDeltaMovement().y > 0);
+    }
+
+    private static double glideLift(Player player, DashContext ctx, double motionY) {
+        if (!ctx.lift || ctx.phaseTicks != 0) return motionY;
+        return Math.max(motionY, liftVelocity(ctx.startY + LIFT_HEIGHT - player.getY()));
+    }
+
+    private static double liftVelocity(double height) {
+        double velocity = 0;
+        while (apexHeight(velocity) < height) velocity += LIFT_STEP;
+        return velocity;
+    }
+
+    private static double apexHeight(double velocity) {
+        double height = 0;
+        while (velocity > 0) {
+            height += velocity;
+            velocity = (velocity - GRAVITY) * AIR_DRAG;
+        }
+        return height;
+    }
+
     private static void add3rdPartyDashStart(SimpleMessageEvent event)
     {
         String[] parts = event.getContent().split(",");
-
-        int entityId = Integer.parseInt(parts[0]);
-        int dir = Integer.parseInt(parts[1]);
+        if (parts.length < 2) return;
+        int entityId, dir;
+        try {
+            entityId = Integer.parseInt(parts[0]);
+            dir = Integer.parseInt(parts[1]);
+        } catch (NumberFormatException e) {
+            return;
+        }
 
         Minecraft mc = Minecraft.getInstance();
         mc.execute(() -> {

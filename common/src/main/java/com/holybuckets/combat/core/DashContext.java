@@ -8,6 +8,7 @@ public class DashContext {
     public final int entityId;
     public DashPhase phase = DashPhase.READY;
     public DashDirection direction = DashDirection.FORWARD;
+    public DashProfile profile = DashProfile.NORMAL;
     public Vec3 glideMotion = Vec3.ZERO;
     public int phaseTicks;
     public int seq;
@@ -22,9 +23,10 @@ public class DashContext {
         return phase == DashPhase.READY || phase == DashPhase.RECOVERY;
     }
 
-    public boolean begin(DashDirection direction, float yaw, int seq, double speed) {
+    public boolean begin(DashDirection direction, DashProfile profile, float yaw, int seq, double speed) {
         if (!canRequest()) return false;
         this.direction = direction;
+        this.profile = profile;
         this.seq = seq;
         this.glideMotion = direction.toWorld(yaw, speed);
         return fire(DashEvent.REQUEST);
@@ -46,7 +48,7 @@ public class DashContext {
     public boolean tick() {
         if (phase == DashPhase.READY) return false;
         phaseTicks++;
-        return phaseTicks >= phase.ticks && fire(DashEvent.ELAPSED);
+        return phaseTicks >= phase.ticks(profile) && fire(DashEvent.ELAPSED);
     }
 
     public boolean isActive() {
@@ -58,12 +60,13 @@ public class DashContext {
     }
 
     public float phaseProgress(float partialTick) {
-        if (phase.ticks == 0) return 1.0F;
-        return Mth.clamp((phaseTicks + partialTick) / phase.ticks, 0.0F, 1.0F);
+        int ticks = phase.ticks(profile);
+        if (ticks == 0) return 1.0F;
+        return Mth.clamp((phaseTicks + partialTick) / ticks, 0.0F, 1.0F);
     }
 
     public float timeline(float partialTick) {
-        if (phase == DashPhase.READY) return DashPhase.totalTicks();
-        return phase.startTick() + Math.min(phase.ticks, phaseTicks + partialTick);
+        if (phase == DashPhase.READY) return DashPhase.totalTicks(profile);
+        return phase.startTick(profile) + Math.min(phase.ticks(profile), phaseTicks + partialTick);
     }
 }

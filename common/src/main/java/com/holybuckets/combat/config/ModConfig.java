@@ -8,6 +8,8 @@ import net.blay09.mods.balm.api.event.PlayerLoginEvent;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -19,8 +21,11 @@ public class ModConfig {
 
     public static final String MSG_SYNC = Constants.MOD_ID + ":config_sync";
 
+    public static final String SYNC_SEPARATOR = "|";
+
     private static ModConfig INSTANCE = new ModConfig();
     public final Set<Item> dashItems = new HashSet<>();
+    public final Set<Block> slowBlocks = new HashSet<>();
 
     private ModConfig() {}
 
@@ -33,10 +38,10 @@ public class ModConfig {
     }
 
     public static ModConfig initOnServerStart(DodgeSwingConfig config) {
-        return load(config.dashItems);
+        return load(config.dashItems, config.slowBlocks);
     }
 
-    public static ModConfig load(Collection<String> itemIds) {
+    public static ModConfig load(Collection<String> itemIds, Collection<String> blockIds) {
         ModConfig config = new ModConfig();
         for (String itemId : itemIds) {
             if (itemId == null || itemId.isBlank()) continue;
@@ -44,27 +49,43 @@ public class ModConfig {
             if (item != null && item != Items.AIR)
                 config.dashItems.add(item);
         }
+        for (String blockId : blockIds) {
+            if (blockId == null || blockId.isBlank()) continue;
+            Block block = HBUtil.BlockUtil.blockNameToBlock(blockId.trim());
+            if (block != null && block != Blocks.AIR)
+                config.slowBlocks.add(block);
+        }
         INSTANCE = config;
         return config;
     }
 
     public static ModConfig reset() {
-        return load(List.of());
+        return load(List.of(), List.of());
     }
 
     public boolean isDashItem(Item item) {
         return dashItems.contains(item);
     }
 
+    public boolean isSlowBlock(Block block) {
+        return slowBlocks.contains(block);
+    }
+
     public String serialize() {
-        return dashItems.stream()
+        String items = dashItems.stream()
             .map(item -> BuiltInRegistries.ITEM.getKey(item).toString())
             .collect(Collectors.joining(","));
+        String blocks = slowBlocks.stream()
+            .map(block -> BuiltInRegistries.BLOCK.getKey(block).toString())
+            .collect(Collectors.joining(","));
+        return items + SYNC_SEPARATOR + blocks;
     }
 
     public static ModConfig deserialize(String content) {
         if (content == null || content.isBlank()) return reset();
-        return load(List.of(content.split(",")));
+        String[] parts = content.split("\\" + SYNC_SEPARATOR, -1);
+        List<String> blocks = parts.length > 1 ? List.of(parts[1].split(",")) : List.of();
+        return load(List.of(parts[0].split(",")), blocks);
     }
 
     private static void onPlayerLogin(PlayerLoginEvent event) {

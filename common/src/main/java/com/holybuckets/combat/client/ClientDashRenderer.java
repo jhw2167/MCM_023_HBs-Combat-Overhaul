@@ -59,12 +59,12 @@ public class ClientDashRenderer {
         if (ageInTicks == 0.0F) return;
         DashContext ctx = ClientDashManager.getActive(player);
         if (ctx == null) return;
-        Animation animation = getAnimation(ctx.direction);
+        Animation animation = getAnimation(ctx);
         if (animation == null) return;
 
         float partialTick = Mth.clamp(ageInTicks - player.tickCount, 0.0F, 1.0F);
         float time = ctx.timeline(partialTick);
-        float total = DashPhase.totalTicks();
+        float total = DashPhase.totalTicks(ctx.profile);
         double animTick = (time / total) * animation.length();
         float weight = Mth.clamp(Math.min(time / FADE_IN_TICKS, (total - time) / FADE_OUT_TICKS), 0.0F, 1.0F);
 
@@ -155,11 +155,17 @@ public class ClientDashRenderer {
         return t * t * (3.0F - 2.0F * t);
     }
 
-    private static Animation getAnimation(DashDirection direction) {
+    private static Animation getAnimation(DashContext ctx) {
         BakedAnimations baked = GeckoLibCache.getBakedAnimations().get(ANIMATION_FILE);
         if (baked == null) return null;
-        Animation animation = baked.getAnimation(direction.animation);
-        return animation != null ? animation : baked.getAnimation(DashDirection.FALLBACK_ANIMATION);
+        String prefix = ctx.profile.animationPrefix;
+        String[] names = {prefix + ctx.direction.animation, prefix + DashDirection.FALLBACK_ANIMATION,
+            ctx.direction.animation, DashDirection.FALLBACK_ANIMATION};
+        for (String name : names) {
+            Animation animation = baked.getAnimation(name);
+            if (animation != null) return animation;
+        }
+        return null;
     }
 
     private record BonePose(float rx, float ry, float rz, float px, float py, float pz) {

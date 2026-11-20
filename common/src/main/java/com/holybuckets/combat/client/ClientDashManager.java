@@ -45,6 +45,7 @@ public class ClientDashManager implements IDashManager {
         return (ctx != null && ctx.isActive()) ? ctx : null;
     }
 
+    static boolean jumpAvailable = true;
     public void tryDash(Player player, int invSlot)
     {
         if (!DashManager.canDash(player)) return;
@@ -60,11 +61,13 @@ public class ClientDashManager implements IDashManager {
         if (direction == null) return;
         DashContext ctx = CONTEXTS.computeIfAbsent(local.getId(), DashContext::new);
         int seq = ++nextSeq;
-        if (!ctx.begin(direction, local.getYRot(), seq, DashManager.GLIDE_SPEED)) return;
-        ctx.lift = isJumping(local);
+        DashProfile profile = DashManager.profileFor(local);
+        if (!ctx.begin(direction, profile, local.getYRot(), seq, DashManager.GLIDE_SPEED)) return;
+        ctx.lift = isJumping(local) && jumpAvailable;
+        jumpAvailable = !ctx.lift;
         ctx.startY = local.getY();
 
-        local.getCooldowns().addCooldown(stack.getItem(), DashManager.COOLDOWN_TICKS);
+        local.getCooldowns().addCooldown(stack.getItem(), DashManager.cooldownTicks(profile));
         local.level().playLocalSound(local.getX(), local.getY(), local.getZ(), SoundEvents.PLAYER_ATTACK_SWEEP,
             SoundSource.PLAYERS, DashManager.SOUND_VOLUME, DashManager.SOUND_PITCH, false);
         SimpleStringMessage.createAndFire(local, DashManager.MSG_REQUEST, direction.ordinal() + "," + seq + "," + invSlot);
@@ -101,14 +104,22 @@ public class ClientDashManager implements IDashManager {
     }
 
     private static void tickLocal(Player player, DashContext ctx) {
-        if (!DashManager.canDash(player)) ctx.fire(DashEvent.INTERRUPTED);
-        else if (ctx.phase == DashPhase.GLIDE && ctx.phaseTicks > 0 && player.horizontalCollision) ctx.fire(DashEvent.BLOCKED);
-        else ctx.tick();
+        if (!DashManager.canDash(player))
+            ctx.fire(DashEvent.INTERRUPTED);
+        else if (ctx.phase==DashPhase.GLIDE && ctx.phaseTicks>0 && player.horizontalCollision)
+            ctx.fire(DashEvent.BLOCKED);
+        else
+            ctx.tick();
+
+        if(player.onGround()) jumpAvailable=true;
 
         Vec3 motion = player.getDeltaMovement();
         switch (ctx.phase) {
             case ANTICIPATION -> player.setDeltaMovement(motion.x * ANTICIPATION_DRAG, motion.y, motion.z * ANTICIPATION_DRAG);
-            case GLIDE -> player.setDeltaMovement(ctx.glideMotion.x, glideLift(player, ctx, motion.y), ctx.glideMotion.z);
+            case GLIDE -> {
+                double scale = ctx.profile.glideScale(ctx.phaseTicks);
+                player.setDeltaMovement(ctx.glideMotion.x * scale, glideLift(player, ctx, motion.y), ctx.glideMotion.z * scale);
+            }
             case RECOVERY -> {
                 if (ctx.phaseTicks == 0)
                     player.setDeltaMovement(ctx.glideMotion.x * RECOVERY_CARRY, motion.y, ctx.glideMotion.z * RECOVERY_CARRY);
@@ -145,10 +156,11 @@ public class ClientDashManager implements IDashManager {
     {
         String[] parts = event.getContent().split(",");
         if (parts.length < 2) return;
-        int entityId, dir;
+        int entityId, dir, profileId;
         try {
             entityId = Integer.parseInt(parts[0]);
             dir = Integer.parseInt(parts[1]);
+            profileId = parts.length > 2 ? Integer.parseInt(parts[2]) : 0;
         } catch (NumberFormatException e) {
             return;
         }
@@ -160,7 +172,7 @@ public class ClientDashManager implements IDashManager {
             if (!(entity instanceof Player) || entity == mc.player) return;
             DashContext ctx = CONTEXTS.computeIfAbsent(entityId, DashContext::new);
             ctx.reset();
-            ctx.begin(DashDirection.byId(dir), entity.getYRot(), 0, DashManager.GLIDE_SPEED);
+            ctx.begin(DashDirection.byId(dir), DashProfile.byId(profileId), entity.getYRot(), 0, DashManager.GLIDE_SPEED);
         });
     }
 

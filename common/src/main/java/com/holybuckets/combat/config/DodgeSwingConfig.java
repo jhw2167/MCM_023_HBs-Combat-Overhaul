@@ -15,4 +15,8 @@ public class DodgeSwingConfig {
     @NestedType(String.class)
     public List<String> dashItems = List.of( "minecraft:snowball");
 
+    @Comment("List of blocks that slow down player dashes when standing on them.")
+    @NestedType(String.class)
+    public List<String> slowBlocks = List.of("minecraft:soul_sand", "minecraft:honey_block");
+
 }

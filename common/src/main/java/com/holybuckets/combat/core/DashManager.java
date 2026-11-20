@@ -14,6 +14,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -31,8 +32,8 @@ public class DashManager  {
     public static final String MSG_START = Constants.MOD_ID + ":dash_start";
 
     public static final double DASH_DISTANCE = 6.0D;
+    public static final double SLOW_DASH_DISTANCE = 3.0D;
     public static final double GLIDE_SPEED = DASH_DISTANCE / DashPhase.GLIDE.ticks;
-    public static final int COOLDOWN_TICKS = DashPhase.ANTICIPATION.ticks + DashPhase.GLIDE.ticks;
     public static final double BROADCAST_RANGE = 64.0D;
     public static final float SOUND_VOLUME = 0.6F;
     public static final float SOUND_PITCH = 1.6F;
@@ -55,6 +56,19 @@ public class DashManager  {
             && !player.isInWater()
             && !player.isInLava()
             && !player.getAbilities().flying;
+    }
+
+    public static int cooldownTicks(DashProfile profile) {
+        return DashPhase.ANTICIPATION.ticks + DashPhase.GLIDE.ticks(profile);
+    }
+
+    public static DashProfile profileFor(Player player) {
+        return isSlowed(player) ? DashProfile.SLOW : DashProfile.NORMAL;
+    }
+
+    public static boolean isSlowed(Player player) {
+        if (player.hasEffect(MobEffects.MOVEMENT_SLOWDOWN)) return true;
+        return ModConfig.getInstance().isSlowBlock(player.level().getBlockState(player.getOnPos()).getBlock());
     }
 
     private static void onRequest(SimpleMessageEvent event)
@@ -98,18 +112,20 @@ public class DashManager  {
             ctx = new DashContext(player.getId());
             CONTEXTS.put(player, ctx);
         }
-        ctx.begin(direction, player.getYRot(), seq, GLIDE_SPEED);
+        DashProfile profile = profileFor(player);
+        ctx.begin(direction, profile, player.getYRot(), seq, GLIDE_SPEED);
 
         if (!player.getAbilities().instabuild) stack.shrink(1);
         player.fallDistance = 0.0F;
 
-        player.level().playSound(player, player.getX(), player.getY(), player.getZ(),
-            SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, SOUND_VOLUME, SOUND_PITCH);
-        broadcastStart(player, direction);
+        //Need a better sound, some sort of whoosh that isnt the firecracker
+        //player.level().playSound(player, player.getX(), player.getY(), player.getZ(),
+            //SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, SOUND_VOLUME, SOUND_PITCH);
+        broadcastStart(player, direction, profile);
     }
 
-    private static void broadcastStart(ServerPlayer player, DashDirection direction) {
-        String payload = player.getId() + "," + direction.ordinal();
+    private static void broadcastStart(ServerPlayer player, DashDirection direction, DashProfile profile) {
+        String payload = player.getId() + "," + direction.ordinal() + "," + profile.ordinal();
         double rangeSqr = BROADCAST_RANGE * BROADCAST_RANGE;
         for (ServerPlayer other : player.serverLevel().players()) {
             if (other == player || other.distanceToSqr(player) > rangeSqr) continue;

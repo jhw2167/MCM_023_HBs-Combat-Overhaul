@@ -34,15 +34,19 @@ public enum DashPhase {
         };
     }
 
-    public int startTick() {
+    public int ticks(DashProfile profile) {
+        return this == GLIDE ? profile.glideTicks() : ticks;
+    }
+
+    public int startTick(DashProfile profile) {
         return switch (this) {
             case READY, ANTICIPATION -> 0;
             case GLIDE -> ANTICIPATION.ticks;
-            case RECOVERY -> ANTICIPATION.ticks + GLIDE.ticks;
+            case RECOVERY -> ANTICIPATION.ticks + GLIDE.ticks(profile);
         };
     }
 
-    public static int totalTicks() {
-        return ANTICIPATION.ticks + GLIDE.ticks + RECOVERY.ticks;
+    public static int totalTicks(DashProfile profile) {
+        return ANTICIPATION.ticks + GLIDE.ticks(profile) + RECOVERY.ticks;
     }
 }
